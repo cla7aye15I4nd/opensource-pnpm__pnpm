@@ -8,19 +8,35 @@ use std::{
 
 /// Environment variables by which an agent identifies itself, and the
 /// agent skill directory each one reads.
+///
+/// Specific agent indicators are checked before generic fallbacks.
 const AGENT_ENV_DIRS: &[(&str, &str)] = &[
     ("CLAUDECODE", ".claude/skills"),
+    ("CLAUDE_CODE", ".claude/skills"),
     ("CURSOR_AGENT", ".cursor/skills"),
     ("GEMINI_CLI", ".gemini/skills"),
+    ("ANTIGRAVITY_AGENT", ".agents/skills"),
+    ("COPILOT_AGENT", ".github/skills"),
+    ("COPILOT_CLI", ".github/skills"),
+    ("CODEX_THREAD_ID", ".agents/skills"),
+    ("CODEX_SANDBOX", ".agents/skills"),
+    ("AI_AGENT", ".agents/skills"),
 ];
 
 /// The agent skill directory of the agent running pnpm, when one
 /// identifies itself in the environment.
 #[must_use]
 pub fn agent_skills_dir_from_env() -> Option<&'static str> {
+    agent_skills_dir_from_lookup(|var| std::env::var_os(var))
+}
+
+#[must_use]
+pub(crate) fn agent_skills_dir_from_lookup(
+    mut lookup: impl FnMut(&str) -> Option<std::ffi::OsString>,
+) -> Option<&'static str> {
     AGENT_ENV_DIRS
         .iter()
-        .find(|(var, _)| std::env::var_os(var).is_some_and(|value| !value.is_empty()))
+        .find(|(var, _)| lookup(var).is_some_and(|value| !value.is_empty()))
         .map(|(_, dir)| *dir)
 }
 
@@ -101,3 +117,6 @@ fn existing_agent_dirs(workspace_root: &Path) -> Vec<PathBuf> {
     dirs.sort();
     dirs
 }
+
+#[cfg(test)]
+mod tests;
